@@ -18,9 +18,6 @@
   // state yet). After that, real elapsed progress is persisted and this is
   // never applied again.
   function seedRuntime(id, now) {
-    if (id === 'sensor') {
-      return { stock: 10, accumulatedMs: 0, lastResumeAt: new Date('2026-07-23T15:00:00').toISOString() };
-    }
     return { stock: DEFAULTS.filter(function (d) { return d.id === id; })[0].fullStock, accumulatedMs: 0, lastResumeAt: new Date(now).toISOString() };
   }
 
@@ -112,12 +109,12 @@
       progress = 1;
     } else if (notYetStarted) {
       var daysUntil = Math.ceil((new Date(p.lastResumeAt).getTime() - now) / DAY_MS);
-      circleLabel = daysUntil + 'd';
+      circleLabel = String(daysUntil);
       progress = 0;
     } else {
       var elapsed = computeElapsedMs(p, now);
       var daysLeft = Math.max(0, Math.ceil((cycleMs - elapsed) / DAY_MS));
-      circleLabel = daysLeft + 'd';
+      circleLabel = String(daysLeft);
       progress = Math.min(1, elapsed / cycleMs);
     }
     var dashOffset = RING_CIRCUMFERENCE * (1 - Math.max(progress, 0.03));
