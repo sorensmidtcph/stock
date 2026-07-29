@@ -10,9 +10,14 @@
 
   --color-neutral-400: #bab6b6;
   --color-neutral-500: #9b9797;
+  --color-neutral-900: #2d2b2b;
 
   --color-accent-100: #fff2ef;
+  --color-accent-600: #dd2b0f;
+  --color-accent-700: #ae1800;
   --color-accent-800: #7c1405;
+
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
 
   --font-heading: "Archivo", system-ui, sans-serif;
   --font-body: "Archivo", system-ui, sans-serif;
@@ -165,6 +170,7 @@ body {
   position: relative;
   width: 56px;
   height: 56px;
+  cursor: pointer;
 }
 .ring-wrap svg { position: absolute; top: 0; left: 0; }
 .ring-label {
@@ -186,7 +192,7 @@ body {
   margin-left: auto;
 }
 
-.btn {
+.icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -202,5 +208,61 @@ body {
   min-height: 44px;
   padding: 0;
 }
-.btn:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.btn:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.icon-btn:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.icon-btn:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+
+/* — buttons (dialog) — */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: 0;
+}
+.btn-primary { background: var(--color-accent); color: var(--color-bg); }
+.btn-primary:hover { background: var(--color-accent-600); }
+.btn-primary:active { background: var(--color-accent-700); }
+.btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+
+/* — dialog — */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+.dialog {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+.dialog-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 20px;
+}
+.dialog-body { font-size: 14px; opacity: 0.85; }
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

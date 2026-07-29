@@ -62,7 +62,13 @@
     return Object.assign({}, p, { stock: stock, accumulatedMs: elapsed, lastResumeAt: new Date(now).toISOString() });
   }
 
-  var state = { products: load().map(function (p) { return tickProduct(p, Date.now()); }) };
+  // Resets a product's cycle timer to start over from now, without
+  // touching its stock count.
+  function resetProduct(p, now) {
+    return Object.assign({}, p, { accumulatedMs: 0, lastResumeAt: new Date(now).toISOString() });
+  }
+
+  var state = { products: load().map(function (p) { return tickProduct(p, Date.now()); }), resetId: null };
   persist(state.products);
 
   function update(id, fn) {
@@ -89,6 +95,22 @@
     update(id, function (cur) {
       return Object.assign({}, cur, { stock: Math.max(0, cur.stock - 1) });
     });
+  }
+
+  function requestReset(id) {
+    state.resetId = id;
+    render();
+  }
+
+  function closeReset() {
+    state.resetId = null;
+    render();
+  }
+
+  function confirmReset() {
+    var id = state.resetId;
+    state.resetId = null;
+    update(id, function (cur, now) { return resetProduct(cur, now); });
   }
 
   function escapeHtml(str) {
@@ -170,7 +192,7 @@
           '<div class="stock-number">' + v.stock + '</div>' +
         '</div>' +
         '<div class="bottom-row">' +
-          '<div class="ring-wrap">' +
+          '<div class="ring-wrap" data-action="reset" role="button" aria-label="Nulstil nedtælling">' +
             '<svg width="56" height="56" viewBox="0 0 56 56">' +
               '<circle cx="28" cy="28" r="25" fill="none" stroke="var(--color-divider)" stroke-width="2"></circle>' +
               '<circle cx="28" cy="28" r="25" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" ' +
@@ -179,8 +201,26 @@
             '<div class="ring-label">' + escapeHtml(v.circleLabel) + '</div>' +
           '</div>' +
           '<div class="btn-group">' +
-            '<button type="button" class="btn" aria-label="Fjern en" data-action="decrement">−</button>' +
-            '<button type="button" class="btn" aria-label="Tilføj en" data-action="increment">+</button>' +
+            '<button type="button" class="icon-btn" aria-label="Fjern en" data-action="decrement">−</button>' +
+            '<button type="button" class="icon-btn" aria-label="Tilføj en" data-action="increment">+</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function dialogHtml() {
+    if (!state.resetId) return '';
+    var p = state.products.filter(function (x) { return x.id === state.resetId; })[0];
+    if (!p) return '';
+    return (
+      '<div class="dialog-backdrop" data-action="close-reset">' +
+        '<div class="dialog" style="max-width:360px" data-action="stop">' +
+          '<div class="dialog-title">Nulstil nedtælling</div>' +
+          '<div class="dialog-body">Nulstil nedtællingen for ' + escapeHtml(p.name) + '? Cyklussen starter forfra fra nu.</div>' +
+          '<div class="dialog-actions">' +
+            '<button type="button" class="btn btn-ghost" style="min-height:44px;border-radius:999px" data-action="cancel-reset">Annuller</button>' +
+            '<button type="button" class="btn btn-primary" style="min-height:44px;border-radius:999px" data-action="confirm-reset">Nulstil</button>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -188,19 +228,34 @@
   }
 
   var cardsEl = document.getElementById('cards');
+  var dialogEl = document.getElementById('dialog-root');
 
   function render() {
     var now = Date.now();
     cardsEl.innerHTML = state.products.map(function (p) { return cardHtml(buildView(p, now)); }).join('');
+    dialogEl.innerHTML = dialogHtml();
   }
 
   cardsEl.addEventListener('click', function (e) {
+    var resetTrigger = e.target.closest('[data-action="reset"]');
+    if (resetTrigger) {
+      requestReset(resetTrigger.closest('.card').getAttribute('data-id'));
+      return;
+    }
     var btn = e.target.closest('button[data-action]');
     if (!btn) return;
     var card = btn.closest('.card');
     var id = card.getAttribute('data-id');
     if (btn.getAttribute('data-action') === 'increment') increment(id);
     else decrement(id);
+  });
+
+  dialogEl.addEventListener('click', function (e) {
+    var action = e.target.closest('[data-action]');
+    if (!action) return;
+    var act = action.getAttribute('data-action');
+    if (act === 'close-reset' || act === 'cancel-reset') closeReset();
+    else if (act === 'confirm-reset') confirmReset();
   });
 
   render();
