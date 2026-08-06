@@ -8,10 +8,10 @@
   var RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
 
   var DEFAULTS = [
-    { id: 'insulin', name: 'Insulin', icon: 'insulin', fullStock: 7, maxStock: 70, cycleDays: 13 },
+    { id: 'insulin', name: 'Insulin', icon: 'insulin', fullStock: 7, maxStock: 70, cycleDays: 12 },
     { id: 'sensor', name: 'Sensor', icon: 'sensor', fullStock: 10, maxStock: 70, cycleDays: 7 },
     { id: 'infusion', name: 'Infusion set', icon: 'infusion', fullStock: 20, maxStock: 70, cycleDays: 7 },
-    { id: 'syringe', name: 'Sprøjter', icon: 'syringe', fullStock: 30, maxStock: 70, cycleDays: 3.5 }
+    { id: 'syringe', name: 'Sprøjter', icon: 'syringe', fullStock: 30, maxStock: 70, cycleDays: 3 }
   ];
 
   // Seed used only the very first time the app runs on a device (no saved
