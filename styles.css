@@ -115,10 +115,18 @@ body {
   100% { transform: scale(1.8); opacity: 0; }
 }
 
+.countdown-block {
+  text-align: right;
+  white-space: nowrap;
+}
 .countdown-text {
   font-size: 12px;
   color: var(--color-neutral-500);
-  white-space: nowrap;
+}
+.countdown-date {
+  font-size: 11px;
+  color: var(--color-neutral-400);
+  margin-top: 2px;
 }
 
 .title-row {
@@ -265,4 +273,28 @@ body {
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+
+.adjust-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.adjust-title { font-size: 13px; font-weight: 600; }
+.adjust-label {
+  font-size: 12px;
+  color: var(--color-neutral-500);
+  margin-top: 2px;
+}
+.adjust-btns {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+.btn-block {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
 }

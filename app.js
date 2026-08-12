@@ -68,7 +68,20 @@
     return Object.assign({}, p, { accumulatedMs: 0, lastResumeAt: new Date(now).toISOString() });
   }
 
-  var state = { products: load().map(function (p) { return tickProduct(p, Date.now()); }), resetId: null };
+  // Nudges a product's countdown by `delta` days (positive = more days
+  // left, negative = fewer), clamped within the cycle. Stock is untouched.
+  function shiftDays(p, delta) {
+    var cycleMs = p.cycleDays * DAY_MS;
+    var now = Date.now();
+    var elapsed = computeElapsedMs(p, now);
+    var next = Math.min(cycleMs - 60000, Math.max(0, elapsed - delta * DAY_MS));
+    if (p.lastResumeAt) {
+      return Object.assign({}, p, { accumulatedMs: 0, lastResumeAt: new Date(now - next).toISOString() });
+    }
+    return Object.assign({}, p, { accumulatedMs: next });
+  }
+
+  var state = { products: load().map(function (p) { return tickProduct(p, Date.now()); }), resetId: null, pendingDelta: 0 };
   persist(state.products);
 
   function update(id, fn) {
@@ -99,18 +112,40 @@
 
   function requestReset(id) {
     state.resetId = id;
+    state.pendingDelta = 0;
     render();
   }
 
   function closeReset() {
     state.resetId = null;
+    state.pendingDelta = 0;
     render();
   }
 
   function confirmReset() {
     var id = state.resetId;
     state.resetId = null;
+    state.pendingDelta = 0;
     update(id, function (cur, now) { return resetProduct(cur, now); });
+  }
+
+  function adjustPlus() {
+    state.pendingDelta += 1;
+    render();
+  }
+
+  function adjustMinus() {
+    state.pendingDelta -= 1;
+    render();
+  }
+
+  function applyAdjust() {
+    var id = state.resetId;
+    var delta = state.pendingDelta;
+    state.resetId = null;
+    state.pendingDelta = 0;
+    if (delta) update(id, function (cur) { return shiftDays(cur, delta); });
+    else render();
   }
 
   function escapeHtml(str) {
@@ -142,6 +177,7 @@
     var dashOffset = RING_CIRCUMFERENCE * (1 - Math.max(progress, 0.03));
 
     var countdownText = '';
+    var endDateText = '';
     if (!isEmpty && !notYetStarted) {
       var elapsed2 = computeElapsedMs(p, now);
       var remainMs = Math.max(0, cycleMs - elapsed2);
@@ -154,6 +190,7 @@
       if (d || h) parts.push(h + 't');
       parts.push(m + 'm');
       countdownText = parts.join(' ');
+      endDateText = new Date(now + remainMs).toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' });
     }
 
     return {
@@ -163,6 +200,7 @@
       isEmpty: isEmpty,
       isLow: isLow,
       countdownText: countdownText,
+      endDateText: endDateText,
       cycleLabel: (p.icon === 'insulin' ? 'Tømmes hver ' : 'Skiftes hver ') + p.cycleDays + '. dag',
       circleLabel: circleLabel,
       dashOffset: dashOffset
@@ -177,7 +215,10 @@
             '<span class="live-dot"><span></span><span></span></span>' +
             '<span>' + escapeHtml(v.cycleLabel) + '</span>' +
           '</div>' +
-          (v.countdownText ? '<div class="countdown-text">' + escapeHtml(v.countdownText) + '</div>' : '') +
+          (v.countdownText ? '<div class="countdown-block">' +
+              '<div class="countdown-text">' + escapeHtml(v.countdownText) + '</div>' +
+              '<div class="countdown-date">' + escapeHtml(v.endDateText) + '</div>' +
+            '</div>' : '') +
         '</div>' +
         '<div class="title-row">' +
           '<div class="title-col">' +
@@ -213,11 +254,28 @@
     if (!state.resetId) return '';
     var p = state.products.filter(function (x) { return x.id === state.resetId; })[0];
     if (!p) return '';
+    var view = buildView(p, Date.now());
+    var base = Number(view.circleLabel || 0);
+    var shown = Math.max(0, base + state.pendingDelta);
+    var deltaSuffix = state.pendingDelta ? ' (' + (state.pendingDelta > 0 ? '+' : '') + state.pendingDelta + ' dage)' : '';
+    var adjustLabel = 'Dage tilbage: ' + shown + deltaSuffix;
     return (
       '<div class="dialog-backdrop" data-action="close-reset">' +
         '<div class="dialog" style="max-width:360px" data-action="stop">' +
           '<div class="dialog-title">Nulstil nedtælling</div>' +
-          '<div class="dialog-body">Nulstil nedtællingen for ' + escapeHtml(p.name) + '? Cyklussen starter forfra fra nu.</div>' +
+          '<div class="dialog-body">' +
+            '<div class="adjust-row">' +
+              '<div>' +
+                '<div class="adjust-title">Justér nedtælling</div>' +
+                '<div class="adjust-label">' + escapeHtml(adjustLabel) + '</div>' +
+              '</div>' +
+              '<div class="adjust-btns">' +
+                '<button type="button" class="icon-btn" aria-label="En dag tilbage" data-action="adjust-minus">−</button>' +
+                '<button type="button" class="icon-btn" aria-label="En dag frem" data-action="adjust-plus">+</button>' +
+              '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-primary btn-block" style="min-height:44px;border-radius:999px;margin-top:var(--space-3)" data-action="apply-adjust">Opdater</button>' +
+          '</div>' +
           '<div class="dialog-actions">' +
             '<button type="button" class="btn btn-ghost" style="min-height:44px;border-radius:999px" data-action="cancel-reset">Annuller</button>' +
             '<button type="button" class="btn btn-primary" style="min-height:44px;border-radius:999px" data-action="confirm-reset">Nulstil</button>' +
@@ -256,6 +314,9 @@
     var act = action.getAttribute('data-action');
     if (act === 'close-reset' || act === 'cancel-reset') closeReset();
     else if (act === 'confirm-reset') confirmReset();
+    else if (act === 'adjust-minus') adjustMinus();
+    else if (act === 'adjust-plus') adjustPlus();
+    else if (act === 'apply-adjust') applyAdjust();
   });
 
   render();
